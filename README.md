@@ -28,4 +28,4 @@
 ## Репозитории
 
 - GitHub — основной репозиторий, ревью и Pull Request'ы.
-- SourceCraft — зеркало репозитория (те же ветки и коммиты).
+- SourceCraft(https://sourcecraft.dev/danillokutanskij/stepafterstep) — зеркало репозитория (те же ветки и коммиты).
