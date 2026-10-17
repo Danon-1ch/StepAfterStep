@@ -23,7 +23,6 @@
 2. [Проблема, которую решает проект](https://github.com/Danon-1ch/StepAfterStep/blob/business_analitic/02_problem.md)
 3. [Функционал](https://github.com/Danon-1ch/StepAfterStep/blob/business_analitic/03_functions.md)
 4. [Архитектура](https://github.com/Danon-1ch/StepAfterStep/blob/business_analitic/04_architecture.md)
-5. Схема архитектуры: `https://github.com/Danon-1ch/StepAfterStep/blob/business_analitic/architecture.excalidraw` (открывается на [excalidraw.com](https://excalidraw.com))
 
 ## Репозитории
 
