@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Кабинет клиники — Шаг за шагом</title>
+  <style>
+    body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #1F2A2E; background: #F4F7F6; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 24px; display: flex; flex-direction: column; gap: 20px; }
+    h1 { margin: 0; font-size: 28px; }
+    .muted { margin: 0; font-size: 14px; color: #6B7680; }
+    form { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+    label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #4A565C; }
+    input { height: 44px; padding: 0 12px; border: 1px solid #C9D2D6; border-radius: 10px; font-size: 15px; }
+    button { height: 44px; padding: 0 18px; border: none; border-radius: 10px; background: #2F7D6D; color: #fff; font-weight: 700; font-size: 14px; cursor: pointer; }
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+    .kpi { background: #fff; border: 1px solid #E3E8E7; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 6px; }
+    .kpi span { font-size: 13px; color: #4A565C; }
+    .kpi b { font-size: 30px; }
+    .kpi.red b { color: #B42318; }
+    .card { background: #fff; border: 1px solid #E3E8E7; border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+    .card h2 { margin: 0; font-size: 16px; }
+    .chart { display: flex; align-items: flex-end; gap: 4px; height: 180px; border-bottom: 1px solid #C9D2D6; }
+    .bar { flex: 1; background: #9CC9BE; border-radius: 3px 3px 0 0; min-height: 2px; }
+    .bar.night { background: #2F7D6D; }
+    .hours { display: flex; gap: 4px; font-size: 11px; color: #6B7680; }
+    .hours span { flex: 1; text-align: center; }
+    pre { margin: 0; padding: 14px; background: #1F2A2E; color: #D5ECE6; border-radius: 10px; font-size: 13px; white-space: pre-wrap; word-break: break-all; }
+    .err { color: #B42318; font-size: 14px; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #0F1514; color: #E4ECEA; }
+      .muted, label, .kpi span, .hours { color: #B4C3BF; }
+      .kpi, .card { background: #18211F; border-color: #2A3633; }
+      input { background: #121A19; color: #E4ECEA; border-color: #3B4A46; }
+      .kpi.red b, .err { color: #FF9A90; }
+      .chart { border-color: #3B4A46; }
+      .bar { background: #3F6F65; }
+      .bar.night { background: #6FCFB8; }
+      pre { background: #0B100F; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <h1>Кабинет клиники</h1>
+    <p class="muted">Только обезличенные данные: без имён и без текста сообщений.</p>
+  </div>
+  <form id="login">
+    <label>Ключ клиники<input id="key" value="demo" required></label>
+    <label>Токен доступа<input id="token" type="password" placeholder="demo-admin" required></label>
+    <button type="submit">Показать статистику</button>
+  </form>
+  <p class="err" id="err"></p>
+
+  <div id="stats" hidden>
+    <div class="kpis">
+      <div class="kpi"><span>Сессий</span><b id="k-sessions">0</b></div>
+      <div class="kpi"><span>Сообщений</span><b id="k-messages">0</b></div>
+      <div class="kpi"><span>Ночью (22:00–06:00)</span><b id="k-night">0%</b></div>
+      <div class="kpi red"><span>Кризисных ситуаций</span><b id="k-crisis">0</b></div>
+      <div class="kpi red"><span>Писали «мне плохо»</span><b id="k-distress">0</b></div>
+      <div class="kpi"><span>Заблокировано фильтрами</span><b id="k-blocked">0</b></div>
+      <div class="kpi"><span>Ответ помог / нет</span><b id="k-rating">0 / 0</b></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h2>Сообщения по часам (московское время)</h2>
+      <div class="chart" id="chart" role="img" aria-label="Количество сообщений по часам суток"></div>
+      <div class="hours" id="hours"></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h2>Виджет для вашего сайта</h2>
+      <p class="muted">Вставьте эту строку на сайт клиники — в углу появится кнопка «Поговорить».</p>
+      <pre id="code"></pre>
+    </div>
+  </div>
+</div>
+<script>
+  const $ = (id) => document.getElementById(id);
+  $("login").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    $("err").textContent = "";
+    const key = $("key").value.trim();
+    const res = await fetch(`/api/clinics/${encodeURIComponent(key)}/stats`, { headers: { "X-Admin-Token": $("token").value } });
+    if (!res.ok) { $("err").textContent = "Неверный ключ или токен."; $("stats").hidden = true; return; }
+    const s = await res.json();
+    $("k-sessions").textContent = s.sessions;
+    $("k-messages").textContent = s.messages;
+    $("k-night").textContent = Math.round(s.night_share * 100) + "%";
+    $("k-crisis").textContent = s.crisis;
+    $("k-distress").textContent = s.distress;
+    $("k-blocked").textContent = s.blocked;
+    $("k-rating").textContent = `${s.rating_up} / ${s.rating_down}`;
+    const max = Math.max(1, ...s.by_hour);
+    $("chart").innerHTML = s.by_hour.map((v, h) =>
+      `<div class="bar${h >= 22 || h < 6 ? " night" : ""}" style="height:${(v / max) * 100}%" title="${h}:00 — ${v}"></div>`).join("");
+    $("hours").innerHTML = s.by_hour.map((_, h) => `<span>${h % 3 === 0 ? h : ""}</span>`).join("");
+    $("code").textContent = `<script src="${location.origin}/widget.js" data-clinic="${key}"><\/script>`;
+    $("stats").hidden = false;
+  });
+</script>
+</body>
+</html>

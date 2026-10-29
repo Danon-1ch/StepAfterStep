@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Шаг за шагом — равный консультант</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    try { var t = localStorage.getItem("shag_theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <div class="header-row">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18h4v-4h4v-4h4V6h4"/></svg>
+        </div>
+        <div>
+          <div class="brand-title">Шаг за шагом</div>
+          <div class="brand-sub" id="clinic-name">на связи 24/7</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn-icon" id="btn-theme" type="button" aria-label="Тёмная тема">
+          <svg class="ico-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+          <svg class="ico-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+        <button class="btn-sos hidden" id="btn-sos" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-4.4-9.3-9A5.3 5.3 0 0 1 12 6a5.3 5.3 0 0 1 9.3 6c-2.3 4.6-9.3 9-9.3 9z"/></svg>
+          Мне плохо
+        </button>
+        <button class="btn-icon hidden" id="btn-close" type="button" aria-label="Закрыть чат">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+    </div>
+    <nav class="tabs hidden" id="tabs">
+      <button class="tab active" type="button" data-tab="chat">Чат</button>
+      <button class="tab" type="button" data-tab="progress">Мой путь</button>
+    </nav>
+  </header>
+
+  <!-- 1. Приветствие -->
+  <section class="screen welcome" id="screen-welcome">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <h1>Привет. Ты здесь не один.</h1>
+      <p>Я — равный консультант. Говорю на основе опыта людей, которые прошли путь выздоровления по 12 шагам. Можно писать в любое время, анонимно.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <span class="label">Кто ты?</span>
+      <button class="choice selected" type="button" data-mode="patient">
+        <b>Я выздоравливаю</b><span>Поддержка в трудный момент, мой путь</span>
+      </button>
+      <button class="choice" type="button" data-mode="relative">
+        <b>Я родственник</b><span>Как поддержать близкого и не навредить</span>
+      </button>
+    </div>
+    <div class="notice">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="flex-shrink:0;margin-top:2px"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+      <span>Я ИИ, а не врач. Я не ставлю диагнозы и не советую лекарства. Если есть угроза жизни — звони <b>112</b>.</span>
+    </div>
+    <div style="flex:1"></div>
+    <button class="btn-primary" id="btn-start" type="button">Начать разговор</button>
+    <p class="small-center">Без регистрации и имени. Историю можно удалить в любой момент.</p>
+  </section>
+
+  <!-- 2. Чат -->
+  <section class="screen hidden" id="screen-chat">
+    <div class="messages" id="messages" aria-live="polite"></div>
+    <div class="quick" id="quick">
+      <button type="button">Очень тянет выпить</button>
+      <button type="button">Шаг дня</button>
+      <button type="button">Я сорвался</button>
+    </div>
+    <form class="composer" id="composer">
+      <label for="input" class="sr-only">Сообщение</label>
+      <input id="input" type="text" placeholder="Напиши, что чувствуешь…" autocomplete="off" maxlength="1000">
+      <button class="btn-send" id="btn-send" type="submit" aria-label="Отправить">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </form>
+  </section>
+
+  <!-- 3. Мой путь -->
+  <section class="screen progress hidden" id="screen-progress">
+    <div class="counter" id="counter">
+      <span>Ты трезв уже</span>
+      <span class="num" id="days">—</span>
+      <span class="unit" id="days-unit">дней</span>
+      <span class="since" id="since">укажи дату ниже</span>
+    </div>
+    <div class="card">
+      <h2>Дата начала трезвости</h2>
+      <div class="date-row">
+        <label for="sober-date" class="sr-only">Дата начала трезвости</label>
+        <input type="date" id="sober-date">
+        <button class="btn-secondary" id="btn-save-date" type="button">Сохранить</button>
+      </div>
+      <p class="muted">Был срыв? Это не провал, а часть пути. Счётчик можно начать заново.</p>
+    </div>
+    <div class="card">
+      <h2>Этапы</h2>
+      <div class="milestones" id="milestones"></div>
+      <p class="muted" id="next-ms"></p>
+    </div>
+    <div class="card">
+      <span class="eyebrow">Шаг дня</span>
+      <h2 id="step-title">…</h2>
+      <p class="muted" id="step-text"></p>
+    </div>
+    <button class="btn-danger" id="btn-delete" type="button">Удалить мою историю</button>
+  </section>
+</div>
+<script src="js/app.js"></script>
+</body>
+</html>

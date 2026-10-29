@@ -1,0 +1,38 @@
+# Запуск всего проекта одной командой:  docker compose up --build
+# Потом открыть в браузере: http://localhost:8080
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: shag
+      POSTGRES_USER: shag
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-shag-local-password}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shag -d shag"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build: ./backend
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://shag:${POSTGRES_PASSWORD:-shag-local-password}@db:5432/shag
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  db-data:

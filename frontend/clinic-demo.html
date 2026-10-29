@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Демо-сайт клиники — пример встраивания виджета</title>
+  <style>
+    body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #1F2A2E; background: #fff; }
+    header { display: flex; justify-content: space-between; align-items: center; padding: 20px 48px; border-bottom: 1px solid #E3E8E7; flex-wrap: wrap; gap: 12px; }
+    .logo { display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 700; }
+    .logo i { width: 40px; height: 40px; border-radius: 10px; background: #3B5B8C; display: block; }
+    nav { display: flex; gap: 28px; flex-wrap: wrap; }
+    nav a { color: #4A565C; text-decoration: none; }
+    main { max-width: 1100px; margin: 0 auto; padding: 64px 48px; display: flex; gap: 48px; flex-wrap: wrap; }
+    .text { flex: 1 1 420px; display: flex; flex-direction: column; gap: 20px; }
+    .eyebrow { font-size: 14px; color: #6B7680; text-transform: uppercase; letter-spacing: 1px; margin: 0; }
+    h1 { margin: 0; font-size: 44px; line-height: 1.15; }
+    p { margin: 0; font-size: 19px; line-height: 1.5; color: #4A565C; }
+    .btns { display: flex; gap: 14px; flex-wrap: wrap; }
+    .btns a { padding: 15px 26px; border-radius: 10px; text-decoration: none; font-weight: 700; }
+    .b1 { background: #3B5B8C; color: #fff; }
+    .b2 { border: 1px solid #C9D2D6; color: #1F2A2E; }
+    .photo { flex: 0 1 400px; min-height: 300px; border-radius: 16px; background: #EEF2F6; display: flex; align-items: center; justify-content: center; color: #6B7680; }
+    .note { max-width: 1100px; margin: 0 auto 120px; padding: 20px 48px; font-size: 14px; color: #6B7680; }
+    code { background: #F4F7F6; padding: 2px 6px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo"><i></i>Клиника «Пример»</div>
+    <nav><a href="#">Услуги</a><a href="#">Врачи</a><a href="#">Реабилитация</a><a href="#">Контакты</a></nav>
+  </header>
+  <main>
+    <div class="text">
+      <p class="eyebrow">Демо-страница клиники-партнёра</p>
+      <h1>Помощь при зависимости и поддержка после выписки</h1>
+      <p>Лечение, реабилитация и сопровождение. Наши пациенты могут получить поддержку в любое время — через чат в правом нижнем углу.</p>
+      <div class="btns"><a class="b1" href="#">Записаться</a><a class="b2" href="#">Позвонить</a></div>
+    </div>
+    <div class="photo">[Фото клиники]</div>
+  </main>
+  <p class="note">Это выдуманная клиника для демонстрации. Чат подключён одной строкой: <code>&lt;script src="/widget.js" data-clinic="demo"&gt;&lt;/script&gt;</code></p>
+
+  <!-- Вот и всё встраивание: -->
+  <script src="/widget.js" data-clinic="demo"></script>
+</body>
+</html>
