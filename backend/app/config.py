@@ -20,6 +20,10 @@ class Settings:
     # Ограничения
     max_message_length: int = int(os.getenv("MAX_MESSAGE_LENGTH", "1000"))
     max_messages_per_minute: int = int(os.getenv("MAX_MESSAGES_PER_MINUTE", "10"))
+    # Лимиты на один IP-адрес: иначе лимит выше обходится созданием новых сессий.
+    # С запасом, потому что за одним адресом может быть, например, Wi-Fi клиники.
+    max_messages_per_minute_per_ip: int = int(os.getenv("MAX_MESSAGES_PER_MINUTE_PER_IP", "30"))
+    max_new_sessions_per_minute: int = int(os.getenv("MAX_NEW_SESSIONS_PER_MINUTE", "10"))
     history_messages_for_llm: int = int(os.getenv("HISTORY_MESSAGES_FOR_LLM", "10"))
 
     # Телефон доверия, который показывается в кризисной карточке.
@@ -28,7 +32,8 @@ class Settings:
 
     # Демо-клиника, которая создаётся при первом запуске
     demo_clinic_key: str = os.getenv("DEMO_CLINIC_KEY", "demo")
-    demo_admin_token: str = os.getenv("DEMO_ADMIN_TOKEN", "demo-admin")
+    # Токен кабинета. Пусто — сервер придумает случайный и напишет его в лог при запуске.
+    demo_admin_token: str = os.getenv("DEMO_ADMIN_TOKEN", "")
     # Телефон демо-клиники — заведомо ненастоящий, только для показа
     demo_clinic_phone: str = os.getenv("DEMO_CLINIC_PHONE", "+7 000 000-00-00")
 

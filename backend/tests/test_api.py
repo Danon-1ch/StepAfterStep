@@ -1,5 +1,9 @@
 """Проверка API: полный сценарий использования."""
+from collections import defaultdict, deque
 from datetime import date, timedelta
+
+from app import main
+from app.config import settings
 
 
 def test_health(client):
@@ -110,3 +114,44 @@ def test_stats_survive_history_deletion(client, session_id):
 def test_step_of_day(client):
     data = client.get("/api/step-of-day").json()
     assert data["title"] and data["text"]
+
+
+def test_rating_counted_once(client, session_id):
+    mid = client.post("/api/chat", json={"session_id": session_id, "text": "Мне одиноко"}).json()["message_id"]
+    stats = lambda: client.get("/api/clinics/demo/stats", headers={"X-Admin-Token": "demo-admin"}).json()
+    before = stats()
+    for value in (1, 1, -1):
+        assert client.post(f"/api/messages/{mid}/rating", json={"session_id": session_id, "value": value}).status_code == 200
+    after = stats()
+    assert after["rating_up"] - before["rating_up"] == 1
+    assert after["rating_down"] == before["rating_down"]
+    assert client.get(f"/api/sessions/{session_id}/messages").json()[-1]["rating"] == 1
+
+
+def test_rate_limit_per_session(client, session_id, monkeypatch):
+    monkeypatch.setattr(main, "_rate", defaultdict(deque))
+    monkeypatch.setattr(settings, "max_messages_per_minute", 3)
+    codes = [client.post("/api/chat", json={"session_id": session_id, "text": "привет"}).status_code for _ in range(4)]
+    assert codes == [200, 200, 200, 429]
+
+
+def test_new_sessions_do_not_bypass_limit(client, monkeypatch):
+    # раньше лимит обходился созданием новой сессии перед каждым сообщением
+    monkeypatch.setattr(main, "_rate", defaultdict(deque))
+    monkeypatch.setattr(settings, "max_messages_per_minute_per_ip", 3)
+    codes = []
+    for _ in range(4):
+        sid = client.post("/api/sessions", json={}).json()["session_id"]
+        codes.append(client.post("/api/chat", json={"session_id": sid, "text": "привет"}).status_code)
+    assert codes == [200, 200, 200, 429]
+
+
+def test_new_sessions_limited(client, monkeypatch):
+    monkeypatch.setattr(main, "_rate", defaultdict(deque))
+    monkeypatch.setattr(settings, "max_new_sessions_per_minute", 2)
+    codes = [client.post("/api/sessions", json={}).status_code for _ in range(3)]
+    assert codes == [200, 200, 429]
+
+
+def test_stats_wrong_token(client):
+    assert client.get("/api/clinics/demo/stats", headers={"X-Admin-Token": "demo-admin-x"}).status_code == 403

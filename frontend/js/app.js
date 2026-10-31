@@ -91,11 +91,12 @@
         (rotate ? ' style="transform:rotate(180deg)"' : "") +
         '><path d="M7 10v11M7 10l4-7a2 2 0 0 1 3 2v4h5a2 2 0 0 1 2 2.3l-1.4 7A2 2 0 0 1 17.6 21H7"/></svg>';
       if (current === value) b.classList.add("on");
+      b.disabled = current === 1 || current === -1; // оценка ставится один раз
       b.addEventListener("click", async () => {
         try {
           await api(`/messages/${messageId}/rating`, { method: "POST", body: JSON.stringify({ session_id: sessionId, value }) });
-          row.querySelectorAll("button").forEach((x) => x.classList.remove("on"));
           b.classList.add("on");
+          row.querySelectorAll("button").forEach((x) => { x.disabled = true; });
         } catch (e) { /* не критично */ }
       });
       return b;

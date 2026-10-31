@@ -23,7 +23,6 @@ class Clinic(Base):
     key: Mapped[str] = mapped_column(String(64), unique=True, index=True)  # ключ виджета
     name: Mapped[str] = mapped_column(String(200))
     phone: Mapped[str] = mapped_column(String(50), default="")  # круглосуточный телефон клиники
-    address: Mapped[str] = mapped_column(String(300), default="")
     admin_token: Mapped[str] = mapped_column(String(128))  # доступ к статистике клиники
 
 

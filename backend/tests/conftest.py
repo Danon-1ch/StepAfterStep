@@ -9,6 +9,9 @@ os.environ["DATABASE_URL"] = f"sqlite:///{_tmp}/test.db"
 os.environ["YANDEX_API_KEY"] = ""
 os.environ["YANDEX_FOLDER_ID"] = ""
 os.environ["MAX_MESSAGES_PER_MINUTE"] = "1000"
+os.environ["MAX_MESSAGES_PER_MINUTE_PER_IP"] = "1000"
+os.environ["MAX_NEW_SESSIONS_PER_MINUTE"] = "1000"
+os.environ["DEMO_ADMIN_TOKEN"] = "demo-admin"
 os.environ["STATIC_DIR"] = ""
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))

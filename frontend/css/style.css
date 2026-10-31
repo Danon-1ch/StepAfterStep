@@ -158,6 +158,8 @@ button, input { font-family: inherit; }
 .rate { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-3); }
 .rate button { width: 32px; height: 32px; border: 1px solid var(--line-2); background: var(--white); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .rate button.on { border-color: var(--green); background: var(--green-soft); }
+.rate button:disabled { cursor: default; }
+.rate button:disabled:not(.on) { opacity: .4; }
 .typing { align-self: flex-start; display: flex; gap: 5px; padding: 14px 16px; background: var(--white); border: 1px solid var(--line); border-radius: 16px; }
 .typing span { width: 7px; height: 7px; border-radius: 50%; background: var(--dot); animation: blink 1.2s infinite; }
 .typing span:nth-child(2) { animation-delay: .2s; }

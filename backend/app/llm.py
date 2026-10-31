@@ -19,11 +19,15 @@ class LLMError(Exception):
     pass
 
 
+last_error: str | None = None  # текст последней ошибки YandexGPT, показывается в /api/health
+
+
 def _model_uri() -> str:
     return f"gpt://{settings.yandex_folder_id}/{settings.yandex_model}"
 
 
-async def _chat_completion(messages: list[dict], temperature: float = 0.5, max_tokens: int = 400) -> str:
+async def _chat_completion(messages: list[dict], temperature: float = 0.5, max_tokens: int = 400, timeout: float = 20) -> str:
+    global last_error
     headers = {
         "Authorization": f"Api-Key {settings.yandex_api_key}",
         "OpenAI-Project": settings.yandex_folder_id,
@@ -36,13 +40,16 @@ async def _chat_completion(messages: list[dict], temperature: float = 0.5, max_t
         "max_tokens": max_tokens,
     }
     try:
-        async with httpx.AsyncClient(timeout=20) as client:
+        async with httpx.AsyncClient(timeout=timeout) as client:
             r = await client.post(f"{settings.yandex_base_url}/chat/completions", headers=headers, json=body)
             r.raise_for_status()
-            return r.json()["choices"][0]["message"]["content"].strip()
+            reply = r.json()["choices"][0]["message"]["content"].strip()
     except Exception as exc:  # сеть, ключ, формат ответа
         log.warning("YandexGPT request failed: %s", exc)
-        raise LLMError(str(exc)) from exc
+        last_error = str(exc) or type(exc).__name__
+        raise LLMError(last_error) from exc
+    last_error = None
+    return reply
 
 
 def build_system_prompt(mode: str, knowledge: list[dict]) -> str:
@@ -77,6 +84,7 @@ async def guard_check(text: str) -> dict:
             ],
             temperature=0,
             max_tokens=30,
+            timeout=5,  # проверка не должна задерживать ответ, если облако тормозит
         )
         start, end = raw.find("{"), raw.rfind("}")
         data = json.loads(raw[start : end + 1])

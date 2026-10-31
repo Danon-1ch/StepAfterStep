@@ -3,6 +3,7 @@
 Запуск без Docker (из папки backend):
     uvicorn app.main:app --reload
 """
+import secrets
 import time
 from collections import defaultdict, deque
 from contextlib import asynccontextmanager
@@ -10,10 +11,9 @@ from datetime import date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from fastapi import Depends, FastAPI, Header, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from . import knowledge, llm, safety
@@ -31,14 +31,20 @@ MSK = ZoneInfo("Europe/Moscow")
 def init_db() -> None:
     Base.metadata.create_all(engine)
     with SessionLocal() as db:
-        if not db.scalar(select(Clinic).where(Clinic.key == settings.demo_clinic_key)):
-            db.add(Clinic(
+        clinic = db.scalar(select(Clinic).where(Clinic.key == settings.demo_clinic_key))
+        if not clinic:
+            # Токен не задан в .env — придумываем случайный, чтобы кабинет не открывался стандартным паролем
+            clinic = Clinic(
                 key=settings.demo_clinic_key,
                 name="Демо-клиника",
                 phone=settings.demo_clinic_phone,
-                admin_token=settings.demo_admin_token,
-            ))
-            db.commit()
+                admin_token=settings.demo_admin_token or secrets.token_urlsafe(12),
+            )
+            db.add(clinic)
+        elif settings.demo_admin_token:
+            clinic.admin_token = settings.demo_admin_token
+        db.commit()
+        print(f"Кабинет клиники: ключ «{clinic.key}», токен «{clinic.admin_token}»", flush=True)
 
 
 @asynccontextmanager
@@ -55,7 +61,6 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
     redoc_url=None,
 )
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
 # ---------- вспомогательное ----------
@@ -63,14 +68,22 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 _rate: dict[str, deque] = defaultdict(deque)
 
 
-def check_rate_limit(session_id: str) -> None:
+def check_rate_limit(key: str, limit: int) -> None:
     now = time.monotonic()
-    q = _rate[session_id]
+    if len(_rate) > 10_000:  # чистим старые ключи, чтобы словарь не рос бесконечно
+        for k in [k for k, q in _rate.items() if not q or now - q[-1] > 60]:
+            del _rate[k]
+    q = _rate[key]
     while q and now - q[0] > 60:
         q.popleft()
-    if len(q) >= settings.max_messages_per_minute:
+    if len(q) >= limit:
         raise HTTPException(429, "Слишком много сообщений подряд. Подожди немного и напиши снова.")
     q.append(now)
+
+
+def client_ip(request: Request) -> str:
+    # shortcut: X-Real-IP ставит наш nginx; без nginx перед сервером заголовок можно подделать
+    return request.headers.get("x-real-ip") or (request.client.host if request.client else "unknown")
 
 
 def get_session_or_404(db: Session, session_id: str) -> ChatSession:
@@ -113,11 +126,13 @@ def log_event(db: Session, clinic_id: int | None, kind: str) -> None:
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "llm": "yandexgpt" if settings.llm_enabled else "demo"}
+    # llm_error не пустой — последний запрос к YandexGPT не прошёл, и бот отвечает шаблонами
+    return {"status": "ok", "llm": "yandexgpt" if settings.llm_enabled else "demo", "llm_error": llm.last_error}
 
 
 @app.post("/api/sessions", response_model=SessionOut)
-def create_session(data: SessionCreate, db: Session = Depends(get_db)):
+def create_session(data: SessionCreate, request: Request, db: Session = Depends(get_db)):
+    check_rate_limit("new:" + client_ip(request), settings.max_new_sessions_per_minute)
     clinic = None
     if data.clinic_key:
         clinic = db.scalar(select(Clinic).where(Clinic.key == data.clinic_key))
@@ -170,14 +185,15 @@ def get_step_of_day():
 
 
 @app.post("/api/chat", response_model=ChatOut)
-async def chat(data: ChatIn, db: Session = Depends(get_db)):
+async def chat(data: ChatIn, request: Request, db: Session = Depends(get_db)):
     s = get_session_or_404(db, data.session_id)
     text = data.text.strip()
     if not text:
         raise HTTPException(400, "Пустое сообщение")
     if len(text) > settings.max_message_length:
         raise HTTPException(400, f"Сообщение слишком длинное (максимум {settings.max_message_length} символов)")
-    check_rate_limit(s.id)
+    check_rate_limit("ip:" + client_ip(request), settings.max_messages_per_minute_per_ip)
+    check_rate_limit(s.id, settings.max_messages_per_minute)
 
     user_msg = Message(session_id=s.id, role="user", text=text)
     db.add(user_msg)
@@ -188,10 +204,10 @@ async def chat(data: ChatIn, db: Session = Depends(get_db)):
     distress = not crisis and safety.detect_distress(text)
     attack = safety.detect_attack(text)
     # Слой 2: ИИ-проверка (если подключён YandexGPT)
-    if not crisis and not distress:
+    if not (crisis or distress or attack):
         guard = await llm.guard_check(text)
         crisis = guard["crisis"]
-        attack = attack or guard["attack"]
+        attack = guard["attack"]
 
     help_list = None
     blocked = False
@@ -238,25 +254,27 @@ def rate_message(message_id: int, data: RatingIn, db: Session = Depends(get_db))
     m = db.get(Message, message_id)
     if not m or m.session_id != data.session_id or m.role != "bot":
         raise HTTPException(404, "Сообщение не найдено")
-    m.rating = data.value
-    log_event(db, m.session.clinic_id, "rating_up" if data.value == 1 else "rating_down")
-    db.commit()
+    if m.rating is None:  # засчитываем только первую оценку, иначе статистика раздувается
+        m.rating = data.value
+        log_event(db, m.session.clinic_id, "rating_up" if data.value == 1 else "rating_down")
+        db.commit()
     return {"ok": True}
 
 
 @app.get("/api/clinics/{key}/stats", response_model=StatsOut)
 def clinic_stats(key: str, x_admin_token: str = Header(default=""), db: Session = Depends(get_db)):
     clinic = db.scalar(select(Clinic).where(Clinic.key == key))
-    if not clinic or x_admin_token != clinic.admin_token:
+    if not clinic or not secrets.compare_digest(x_admin_token.encode(), clinic.admin_token.encode()):
         raise HTTPException(403, "Нет доступа")
-    events = db.scalars(select(Event).where(Event.clinic_id == clinic.id)).all()
-    count = defaultdict(int)
+    count = defaultdict(int, db.execute(
+        select(Event.kind, func.count()).where(Event.clinic_id == clinic.id).group_by(Event.kind)
+    ).all())
     by_hour = [0] * 24
-    for e in events:
-        count[e.kind] += 1
-        if e.kind == "message":
-            created = e.created_at if e.created_at.tzinfo else e.created_at.replace(tzinfo=ZoneInfo("UTC"))
-            by_hour[created.astimezone(MSK).hour] += 1
+    for created in db.scalars(
+        select(Event.created_at).where(Event.clinic_id == clinic.id, Event.kind == "message")
+    ):
+        created = created if created.tzinfo else created.replace(tzinfo=ZoneInfo("UTC"))
+        by_hour[created.astimezone(MSK).hour] += 1
     night = sum(by_hour[h] for h in list(range(22, 24)) + list(range(0, 6)))
     total = sum(by_hour)
     return StatsOut(

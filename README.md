@@ -74,7 +74,7 @@ docker-compose.yml  запуск всего проекта одной коман
 4. Открыть в браузере:
    - http://localhost:8080/clinic-demo.html — сайт клиники с виджетом
    - http://localhost:8080/ — чат
-   - http://localhost:8080/admin.html — кабинет клиники (ключ `demo`, токен `demo-admin`)
+   - http://localhost:8080/admin.html — кабинет клиники (ключ `demo`; токен сервер пишет в лог при запуске: `docker compose logs backend | grep "Кабинет клиники"`, или задайте свой в `.env` — `DEMO_ADMIN_TOKEN`)
 
 ### Вариант 2. Без Docker (нужен Python 3.11+)
 
@@ -93,7 +93,7 @@ uvicorn app.main:app --reload
 1. В [Yandex Cloud](https://console.yandex.cloud) создать каталог и сервисный аккаунт с ролью `ai.languageModels.user`.
 2. Создать для него API-ключ.
 3. В `.env` заполнить `YANDEX_API_KEY` и `YANDEX_FOLDER_ID` (идентификатор каталога).
-4. Перезапустить. Проверка: http://localhost:8080/api/health должен показать `"llm": "yandexgpt"`.
+4. Перезапустить. Проверка: http://localhost:8080/api/health должен показать `"llm": "yandexgpt"`. Если после первого сообщения в чат там появился `llm_error` — запрос к YandexGPT не прошёл (например, `401` — неверный ключ), и бот отвечает шаблонами.
 
 ## Тесты
 
